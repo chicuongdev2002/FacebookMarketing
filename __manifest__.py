@@ -26,7 +26,7 @@
     # 'external_dependencies': {
     #     'python': ['facebook_business'],
     # },
-    'depends': ['base', 'bus', 'web','website_blog','website_sale','Marketing_Content',],
+    'depends': ['base', 'bus', 'web','website_blog','website_sale','MarketingContent',],
     # Module có được phép install hay không
     # Nếu bạn thắc mắc nếu tắt thì làm sao để install
     # Bạn có thể dùng 'auto_install'
