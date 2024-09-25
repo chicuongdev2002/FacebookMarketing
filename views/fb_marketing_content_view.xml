@@ -4,7 +4,7 @@
     <record id="view_marketing_content_form_facebook" model="ir.ui.view">
       <field name="name">marketing.content.form.facebook</field>
       <field name="model">marketing.content</field>
-      <field name="inherit_id" ref="maketing_content.view_marketing_content_form" />
+      <field name="inherit_id" ref="MarketingContent.view_marketing_content_form" />
       <field name="arch" type="xml">
         <xpath expr="//notebook" position="inside">
           <page string="Facebook Marketing">
