@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
   <!-- Menu cha kế thừa từ menu_config của maketing_content -->
-  <menuitem id="menu_facebook_marketing" name="FacebookMarketing" parent="Marketing_Content.menu_config" sequence="0" />
+  <menuitem id="menu_facebook_marketing" name="FacebookMarketing" parent="MarketingContent.menu_config" sequence="0" />
  <!-- Menu Facebook Group -->
   <menuitem id="menu_facebook_groups" name="Facebook Groups" parent="menu_facebook_marketing" sequence="0" action="action_facebook_group" />
  <!-- Menu Account -->
