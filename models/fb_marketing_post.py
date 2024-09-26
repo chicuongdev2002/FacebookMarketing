@@ -31,7 +31,7 @@ class FacebookPost(models.Model):
     schedule_post = fields.Datetime(string='Đặt lịch post bài')  # Thời gian lên lịch đăng bài
     comment = fields.Text(string='Comment')  # Nội dung bình luận cho bài viết
     comment_suggestion_id = fields.Many2many('marketing.comment', string='Comment Suggestion')  
-
+    comment_suggestions_text = fields.Text(compute='_compute_comment_suggestions', string='Comment Suggestions')
     last_auto_comment_time = fields.Datetime('Last Auto Comment Time')  # Thời gian bình luận tự động cuối cùng
     start_auto_comment = fields.Datetime(string='Start Auto Comment')  # Thời gian bắt đầu tự động bình luận
     end_auto_comment = fields.Datetime(string='End Auto Comment')  # Thời gian kết thúc tự động bình luận
@@ -52,6 +52,21 @@ class FacebookPost(models.Model):
     last_comment_id = fields.Char(string='Last Processed Comment ID')  # ID của bình luận cuối cùng đã được xử lý
     # Thời gian đăng bài 
     remind_time_id = fields.Many2one('custom.remind.time', string='Remind Time')
+    
+    def action_show_full_columns(self):
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Marketing Posts',
+            'res_model': 'marketing.post',
+            'view_mode': 'tree,form',
+            'domain': [('id', 'in', self.ids)],
+            'context': {'show_full_columns': True},  # Chuyển context khi nhấn nút
+        }
+    # Thay đổi hiển thị lấy hết nội dung của comment_suggestion
+    @api.depends('comment_suggestion_id')
+    def _compute_comment_suggestions(self):
+        for record in self:
+            record.comment_suggestions_text = ', '.join(record.comment_suggestion_id.mapped('name')[:2])  # Lấy 2 bình luận
     # Lịch post comment
     def _post_scheduled(self):
         current_time = fields.Datetime.now()
@@ -80,10 +95,11 @@ class FacebookPost(models.Model):
             # Nếu state đã được cập nhật thành posted thì log đăng thành công
             if post.state == 'posted':
                 _logger.info(f"Đăng bài viết thành công với ID {post.id}")
+                 # Xóa bản ghi khỏi cơ sở dữ liệu khi đăng thành công
+                scheduled_posts.unlink()
             else:
                 _logger.error(f"Đăng bài viết thất bại với ID {post.id}")
-        # Xóa bản ghi khỏi cơ sở dữ liệu khi đăng thành công
-        scheduled_posts.unlink()
+       
     @api.model
     def _get_latest_content(self):
         """ Lấy nội dung mới nhất đã được tạo trong hệ thống """
@@ -265,8 +281,12 @@ class FacebookPost(models.Model):
             # self.start_auto_comment: Lưu thời gian bắt đầu tự động bình luận.
             # self.end_auto_comment: Lưu thời gian kết thúc tự động bình luận (sau 1 tuần).
             self.state = 'posted'
-            self.start_auto_comment = datetime.now()
-            self.end_auto_comment = self.start_auto_comment + timedelta(weeks=1)
+            # self.start_auto_comment = datetime.now()
+            # self.end_auto_comment = self.start_auto_comment + timedelta(weeks=1)
+            # Kiểm tra nếu không có remind_time_id và comment_suggestion
+            if not self.remind_time_id or not self.comment_suggestion_id:
+             _logger.warning(f"Bài đăng có ID {self.id} không có remind_time_id hoặc comment_suggestion.")
+             return
             self._update_auto_comment_schedule()
         # Xử lí ngoại lệ
         except requests.exceptions.RequestException as e:
@@ -327,7 +347,7 @@ class FacebookPost(models.Model):
             post = schedule.post_id
             if post.state != 'posted' or not post.post_id:
                 continue
-            
+            post.post_next_comment_to_facebook()
             # Tính toán reminder_next_time
             if schedule.remind_time_id:
                 # Lấy tổng số phút
@@ -339,7 +359,7 @@ class FacebookPost(models.Model):
                 new_reminder_time = current_time + timedelta(minutes=int(schedule.remind_time))
             # So sánh nếu new_reminder_time > schedule.end_time thì xóa bản ghi đó
             if new_reminder_time > schedule.end_time:
-                self._remove_auto_comment_schedule(schedule)
+                # self._remove_auto_comment_schedule(schedule)
                 _logger.info(f"Đang xóa bình luận tự động cho bài đăng có ID {post.id} vì đã hết thời gian")
             else:
                 _logger.info(f"Đang đăng bình luận tự động cho bài đăng có ID {post.id}")
@@ -350,19 +370,19 @@ class FacebookPost(models.Model):
                     'reminder_next_time': new_reminder_time,
                 })
                 _logger.info(f"reminder_next_time được cập nhật vào auto.comment.schedule: {new_reminder_time}")
-                try:
-                   action = self.env.ref('facebook_marketing.action_auto_comment_schedule')
-                   _logger.info("Hành động được tìm thấy: %s", action)
-                   return {
-                       'type': 'ir.actions.act_window',
-                       'name': action.name,
-                       'res_model': action.res_model,
-                       'view_mode': action.view_mode,
-                       'target': 'current',
-                       'context': {'reload': True},
-                         }
-                except ValueError:
-                   _logger.error("Không tìm thấy hành động!")
+                # try:
+                #    action = self.env.ref('facebook_marketing.action_auto_comment_schedule')
+                #    _logger.info("Hành động được tìm thấy: %s", action)
+                #    return {
+                #        'type': 'ir.actions.act_window',
+                #        'name': action.name,
+                #        'res_model': action.res_model,
+                #        'view_mode': action.view_mode,
+                #        'target': 'current',
+                #        'context': {'reload': True},
+                #          }
+                # except ValueError:
+                #    _logger.error("Không tìm thấy hành động!")
             _logger.info(f"Đã cập nhật thời gian nhắc nhở tiếp theo cho bài đăng có ID {post.id}")
     #Post comment ngẫu nhiên       
     def post_random_comment_to_facebook(self):
@@ -382,23 +402,22 @@ class FacebookPost(models.Model):
 
      self.post_comment_to_facebook(comment_content)
      _logger.info(f"Đã đăng bình luận ngẫu nhiên cho bài đăng có ID {self.id}: {comment_content}")
-    #Button post comment
-    def post_comment_button(self):
-        for record in self:
-            comment_content = record.comment or 'Default comment'
-            record.post_comment_to_facebook(comment_content)
-    
-        if self.schedule_post:
-            self.state = 'scheduled'
-            self._post_scheduled()
-        else:
-            raise UserError('Vui lòng chọn thời gian post bài.') 
     # Cập nhật commnent tự động cho bản ghi auto.comment.schedule
     def _update_auto_comment_schedule(self):
           # Tìm kiến bản ghi auto.comment.schedule liên kết với bài viết
           schedule = self.env['auto.comment.schedule'].search([('post_id', '=', self.id)], limit=1)
           # Tính toán reminder_next_time
           reminder_next_time = self._calculate_reminder_next_time()
+          _logger.info(f"reminder_next_time: {reminder_next_time}")
+          _logger.info(f"start_auto_comment: {self.start_auto_comment}")
+          current_time = datetime.now()
+           # Kiểm tra nếu reminder_next_time nhỏ hơn start_auto_comment hoặc hiện tại chưa tới start_auto_comment
+          if isinstance(reminder_next_time, datetime) and isinstance(self.start_auto_comment, datetime):
+           if reminder_next_time < self.start_auto_comment or current_time < self.start_auto_comment:
+        # Thực hiện hành động cần thiết
+            reminder_next_time = self.start_auto_comment
+            _logger.info(f"reminder_next_time được cập nhật bằng với start_auto_comment: {reminder_next_time}")
+
           # Điều kiên: Nếu không có reminder_next_time thì in ra log và trả về
           if not reminder_next_time:
             _logger.warning(f"Không thể tính toán thời gian nhắc nhở tiếp theo cho bài đăng có ID {self.id}")
@@ -415,16 +434,7 @@ class FacebookPost(models.Model):
             schedule.sudo().write(vals)
           else:
             schedule = self.env['auto.comment.schedule'].sudo().create(vals)
-           # Gửi thông báo đến bus
-          self.env['bus.bus']._sendone(
-            'auto_comment_schedule',
-            'auto.comment.schedule',
-            {
-                'type': 'update',
-                'id': schedule.id,
-                'reminder_next_time': fields.Datetime.to_string(reminder_next_time),
-            }
-        )
+
     # Hàm tính toán thời gian nhắc nhở tiếp theo
     def _calculate_reminder_next_time(self):
          # Điều kiện: reminder_time_id không được rỗng và reminder_time_id.name khác 'stop'

@@ -53,6 +53,7 @@
          'views/auto_comment_schedule_views.xml',
          'views/assets.xml',
          'views/fb_custom_remind_time_views.xml',
+         'views/fb_list_post_views.xml',
          'views/menu.xml',
         # 'views/facebook_marketplace_views.xml',
         # 'views/product_template_view.xml',
