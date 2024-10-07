@@ -234,7 +234,9 @@ class FacebookPost(models.Model):
                 photo_response.raise_for_status()
                 # Danh sách các ảnh đã tải lên
                 media_ids.append({'media_fbid': photo_response.json()['id']})
-                
+            # Kiểm tra và thêm URL vào nội dung nếu include_link được bật
+            if self.content_id.include_link and self.content_id.url:
+             content += f"\n\n{self.content_id.url}"   
             # Tạo bài đăng với tất cả ảnh đã tải lên
             data = {
                 'message': content,
@@ -261,7 +263,7 @@ class FacebookPost(models.Model):
             # Tạo URL của bài đăng
             self.post_url = f"https://www.facebook.com/{self.post_id.replace('_', '/posts/')}"
             # Kiểm tra nếu có gắn link vào bình luận
-            if self.content_id.include_link and self.content_id.url:
+            if not self.content_id.include_link and self.content_id.url:
                 try:
                     # Gửi yêu cầu post 
                     comment_response = requests.post(

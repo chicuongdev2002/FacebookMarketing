@@ -11,7 +11,7 @@
             <group>
               <field name="post_ids">
                 <tree>
-                  <field name="page_id" />
+                  <!-- <field name="page_id" /> -->
                   <field name="comment" />
                   <field name="schedule_post" />
                   <!-- <field name="remind_time" /> -->

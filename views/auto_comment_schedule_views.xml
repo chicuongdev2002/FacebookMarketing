@@ -5,13 +5,16 @@
     <field name="model">auto.comment.schedule</field>
     <field name="arch" type="xml">
       <form js_class="autocomment" string="Auto Comment Schedule">
+       <header>
+         <button name="action_stop_auto_comment" string="Stop" type="object" class="oe_highlight" confirm="Are you sure you want to stop auto-commenting?" />
+       </header>
         <sheet>
           <group>
             <field name="post_id" readonly="1" />
             <field name="reminder_next_time" readonly="1" />
             <field name="end_time" readonly="1" />
             <!-- <field name="remind_time" /> -->
-            <field name="remind_time_id" string="Remind Time" readonly="1" />
+            <field name="remind_time_id" string="Remind Time"  />
           </group>
         </sheet>
       </form>
@@ -27,6 +30,7 @@
         <field name="reminder_next_time"  />
         <field name="end_time" />
         <field name="remind_time_id" string="Remind Time" />
+        <button name="action_stop_auto_comment" string="Stop" type="object" class="oe_highlight" confirm="Bạn có chắc chắn muốn dừng lịch comment này chứ?" />
       </tree>
     </field>
   </record>
